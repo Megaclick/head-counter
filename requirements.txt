@@ -3,3 +3,4 @@ scipy
 scikit-learn
 pycuda
 pandas
+onnx==1.4.1

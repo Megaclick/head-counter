@@ -20,6 +20,15 @@ Se utilizo data argumentation para mejorar la variabilidad dentro del dataset de
 
 Para la metrica de evaluacion, se utilizo la misma herramienta del calculo de mAP de  [Darknet](https://github.com/AlexeyAB/darknet), en donde los resultados obtenidos se muestran en la siguiente tabla.
 
+|              | Accuracy % | Recall % | F1-Score |
+|--------------|------------|----------|----------|
+| Faster Rcnn  | 87         | 82       | 84.4     |
+| Yolov2       | 74         | 67       | 70.3     |
+| SSD          | 80         | 66       | 72.3     |
+| Resnet-50    | 90         | 82       | 85.8     |
+| Custom Model | 83         | 87       | 84.9     |
+
+
 Estos resultados fueron generados en base al set de testing de Scut-Head-B dada la similiritud de las imagenes con el contexto de buses.
 
 Para la transformacion a TensorRT se utilizo como base [tensorrt_demos](https://github.com/jkjung-avt/tensorrt_demos), los cuales proveen una implementacion de la _yolo layer_ , la cual es requerida para poder transformar yolov4 a TensorRT, y tambien, scripts de transformacion de modelos, especificamente de darknet a onnx, y onnx a TensorRT.
@@ -43,3 +52,39 @@ Un demo del pipeline completo se encuentra en el archivo main.py
 ##### Otros trabajos
 
 Tambien se adjunta una pequeña demo de un modulo que utiliza floodfill, se plantea como idea utilizar los stickers de la puerta para verificar si esta esta abierta o no, una demo de este algoritmo se encuentra en floodfill.py
+
+
+#### Compilacion
+
+
+##### Requerimientos
+* Linux
+* CMake >= 3.12: https://cmake.org/download/
+* CUDA >= 10.0: https://developer.nvidia.com/cuda-toolkit-archive (on Linux do [Post-installation Actions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-**actions**))
+* [OpenCV](https://opencv.org/releases/) compiled
+* cuDNN >= 7.0 https://developer.nvidia.com/rdp/cudnn-archive 
+* TensorRT > 7.2
+
+
+
+Primero, se necesitan instalar el requirements.txt
+
+```
+pip3 install -r requirements.txt
+```
+A su vez, se necesita una version de tensorrt instalada y compilada en el sistema que sea compatible con la version de python que se utiliza.
+
+##### Convertir pesos
+
+
+Se proveen dos archivos en la carpeta yolo. yolov4-tiny-head-416.cfg el cual es la configuracion de la red utilizada para el modelo de cabezas y yolov4-tiny-head-416.weights, el cual son los pesos entrenados en darknet.
+
+Dentro de la carpeta yolo se deben correr los siguientes comandos
+```
+python3 yolo_to_onnx.py -c 1 -m yolov4-tiny-head-416
+python3 nnx_to_tensorrt.py -c 1 -m yolov4-tiny-head-416
+
+```
+
+Luego, dentro de la carpeta plugins, se debe hacer un Make para obtener un .so el cual contendra la informacion de la yolo layer. En caso de no funcionar, se recomienda modificar manualmente la ubicacion de tensorrt dentro del Makefile.
+
