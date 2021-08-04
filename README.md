@@ -2,7 +2,7 @@
 
 ## Introduccion 
 
-Este repositorio contiene el trabajo hecho para el ramo de Vision por Computador [ELO-XXX] de la universidad federico santamaria.
+Este repositorio contiene el trabajo hecho para el ramo de Vision por Computador [IPD-441] de la universidad Federico Santamaria.
 
 El objetivo de este repositorio es entregar una herramienta para hacer seguimiento de personas en el conexto de la evasión dentro de los buses de transantiago.
 
@@ -14,7 +14,7 @@ El pipeline consta de 3 etapas, deteccion, seguimiento y conteo.
 
 Para realizar la deteccion se utilizo [Darknet](https://github.com/AlexeyAB/darknet), en donde se entrenó la version de yolov4-tiny en base al dataset entregado por [Scut-Head](https://github.com/HCIILAB/SCUT-HEAD-Dataset-Release).
 
-Tambien se utilizaron imagenes de los mismos recorridos de los buses, las cuales se pueden ver en la carpeta imagenes (estas imagenes es solo una pequeña muestra del dataset completo). 
+Tambien se utilizaron imagenes de los mismos recorridos de los buses, las cuales se extrajeron en un intervalo de 10 segundos dentro de multiples recorridos del transantiago. una pequeña muestra de estos videos se puede ver en flood.mp4.
 
 Se utilizo data argumentation para mejorar la variabilidad dentro del dataset de buses, para ello se utilizo la herramienta [imgaug](https://github.com/aleju/imgaug)
 
@@ -88,3 +88,9 @@ python3 nnx_to_tensorrt.py -c 1 -m yolov4-tiny-head-416
 
 Luego, dentro de la carpeta plugins, se debe hacer un Make para obtener un .so el cual contendra la informacion de la yolo layer. En caso de no funcionar, se recomienda modificar manualmente la ubicacion de tensorrt dentro del Makefile.
 
+
+##### Run
+
+```
+python3 main.py
+```
