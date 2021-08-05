@@ -84,36 +84,58 @@ if __name__ == "__main__":
     trt = DetectTensorRT(args)
     trt.load_tensorRT()
 
-    cap = cv2.VideoCapture('demo.avi')
+    cap = cv2.VideoCapture('flood.mp4')
 
+
+    #Based on https://iopscience.iop.org/article/10.1088/1742-6596/1230/1/012018/pdf
+    #DONT FORGET TO CITE ON THE SECOND REPORT ... 
     while(True):
         # Capture frame-by-frame
         ret, frame = cap.read()
-        frame2 = frame
-        boxes, confs, clss =  trt.process_img(frame)
+        if ret:
+            frame2 = frame.copy()
+            boxes, confs, clss =  trt.process_img(frame)
 
-        img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+            #img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+            
+            detections = list(zip(clss,confs,boxes))
+
+            termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
         
-        detections = list(zip(clss,confs,boxes))
-
-
-    # grab the ROI for the bounding box and convert it
-        # to the HSV color space
-        for box in boxes:
-            roi = orig[tl[1]:br[1], tl[0]:br[0]]
-            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-            #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
         
-            # compute a HSV histogram for the ROI and store the
-            # bounding box
-            roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
-            roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
-            roiBox = (tl[0], tl[1], br[0], br[1])
-            hsv = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
-            backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
+            #Based on opencv docs
+            # https://docs.opencv.org/3.4/d7/d00/tutorial_meanshift.html
 
-        # Display the resulting frame
-        cv2.imshow('frame',frame)
+            # grab the ROI for the bounding box and convert it
+            # to the HSV color space
+            for box in boxes:
+                roi = frame2[box[1]:box[3], box[0]:box[2]]
+                cv2.imshow('img2',roi)
+
+                roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+                # compute a HSV histogram for the ROI and store the
+                # bounding box
+                roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
+                roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
+                roiBox = (box[0], box[1], box[2], box[3])
+                hsv = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
+                backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
+                (r, roiBox) = cv2.CamShift(backProj, roiBox, termination)
+                #DRAWBBOXES
+                #cv2.rectangle(frame, (box[0],box[1]), (box[2],box[3]), (255,0,0))
+                #cv2.rectangle(frame, (roiBox[0],roiBox[1]), (roiBox[2],roiBox[3]), (255,0,0))
+               
+                ##DRAW POLYLINES
+                pts = cv2.boxPoints(r)
+                pts = np.int0(pts)
+                img2 = cv2.polylines(frame,[pts],True, 255,2)
+                cv2.imshow('img2',img2)
+
+
+
+            # Display the resulting frame
+            cv2.imshow('frame',frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
