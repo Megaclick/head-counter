@@ -1,0 +1,14 @@
+{
+   "model":{
+      "yolov4":{
+         "cfg":"./models/yolov4/yolov4.cfg",
+         "weights":"./models/yolov4/yolov4.weights",
+         "data":"./models/yolov4/coco.data"
+      },
+      "head":{
+         "cfg":"./models/head/yolov4-tiny-head-416.cfg",
+         "weights":"./models/head/yolov4-tiny-head-416.weights",
+         "data":"./models/head/head.data"
+      }
+   }
+}

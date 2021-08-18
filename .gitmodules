@@ -1,0 +1,3 @@
+[submodule "thirdparty/darknet"]
+	path = thirdparty/darknet
+	url = https://github.com/AlexeyAB/darknet.git
