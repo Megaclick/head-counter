@@ -34,7 +34,7 @@ def main():
 
     #change model
     net_config = config['model']["head"]
-    mot_tracker = Sort()
+    mot_tracker = Sort(max_age=30)
     random.seed(3)  # deterministic bbox colors
     network, class_names, class_colors = darknet.load_network(
         net_config['cfg'],

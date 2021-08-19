@@ -1,3 +1,6 @@
 [submodule "thirdparty/darknet"]
 	path = thirdparty/darknet
 	url = https://github.com/AlexeyAB/darknet.git
+[submodule "thirdparty/deepsort"]
+	path = thirdparty/deepsort
+	url = https://github.com/nwojke/deep_sort.git
