@@ -156,33 +156,30 @@ if __name__ == "__main__":
     #         (416, 416))
 
 
-    cap = cv2.VideoCapture('demo.avi')
+    cap = cv2.VideoCapture('videos/prueba6.mp4')
+
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(
+            "./output/centroid/fskip0/prueba6.avi", fourcc, 25,
+            (704, 576))
 
     start_time = datetime.datetime(100,1,1,10,26,47)
     fps = cap.get(cv2.CAP_PROP_FPS)
     
 
 
+
+
     #Esta lista contendra todas las lineas instanciadas para cada video
     #este argumento en un futuro sera automatizado desde el
     #sistema centralizado que manejará todos los buses.
-
-
     lines = []
-    #entrada
-    # lines.append(line_track(np.array((70,50)), np.array((380,50)))) 
-    # lines.append(line_track(np.array((70,60)), np.array((380,60))))
-    #normal
-    #lines.append(line_track(np.array((70,95)), np.array((380,95))))
-    #lines.append(line_track(np.array((70,90)), np.array((380,90))))
-    #nano
-    lines.append(line_track(np.array((120,205)), np.array((281,161))))
-    lines.append(line_track(np.array((118,228)), np.array((281,184))))
+
+    lines.append(line_track(np.array((125,110)), np.array((550,110))))
+    lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-
-
-    count = 0
+    count = 10
     fskip=0
     trakeable = {}
 
@@ -204,12 +201,11 @@ if __name__ == "__main__":
                     frame, network, class_names, class_colors, 0.25
                     )
         new_dets = output_to_original_tlbr(detections, frame)
-
+        count=0
 
         # Creacion y update de IDS
         del_list = []
         bboxes = [f[2] for f in new_dets]
-        print(bboxes)
         objects = ct.update(bboxes)
         try:
             for (objectID, centroid) in objects.items():
@@ -297,7 +293,7 @@ if __name__ == "__main__":
 
         #finalmente, se dibujan en el frame la metadata obtenida.
 
-        fskip +=1
+        count +=1
 
 
         cv2.rectangle(frame, (0, 0), (130, 40), (0,0,0), -1)
@@ -306,7 +302,7 @@ if __name__ == "__main__":
 
         cv2.putText(frame,'in: '+str(lines[1].countup)+ ' out: '+str(lines[1].countdown), (3,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 0), 1)
         cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2) 
-        #out.write(frame)
+        out.write(frame)
         cv2.imshow('frame',frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
