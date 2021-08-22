@@ -134,7 +134,14 @@ def output_to_original_tlbr(dets,orig_frame):
 
 
 def main():
-    
+    parser = argparse.ArgumentParser(description='Sort tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
+   
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None
@@ -168,12 +175,13 @@ def main():
 
     #cap = cv2.VideoCapture(0)
     #cap = cv2.VideoCapture("demo.avi")
-    cap = cv2.VideoCapture("videos/prueba6.mp4")
+    cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
     out = cv2.VideoWriter(
-            "./output/deepsort/fskip0/prueba6.avi", fourcc, 25,
+            args.output, fourcc, 25,
             (704, 576))
+    count = int(args.fskip)
 
 
     trakeable ={}
@@ -183,7 +191,6 @@ def main():
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-    count = 10
     while True:
         # loop asking for new image paths if no list is given
         
@@ -191,11 +198,14 @@ def main():
         frame = image_name.copy()
         if ret:
             #Object Detection
-            image, detections = image_detection(
-                image_name, network, class_names, class_colors, 0.25
-                )
-            new_dets = output_to_original_tlbr(detections, image_name)
-            count = 0
+            if count == int(args.fskip):
+    
+                image, detections = image_detection(
+                    image_name, network, class_names, class_colors, 0.25
+                    )
+                new_dets = output_to_original_tlbr(detections, image_name)
+
+
             if len(new_dets)!=0 :
                 bboxes = []
                 scores = []
@@ -314,7 +324,11 @@ def main():
 
             out.write(frame)
 
-            count+=1
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0
+                
             #draw bbox on orig image
             if new_dets is not None:
                 for det in new_dets:

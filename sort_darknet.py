@@ -9,6 +9,8 @@ import pandas as pd
 from tracker import IDetectionMetadata
 import math 
 from scipy.spatial import distance
+import argparse
+import sys
 
 def intersect(A,B,C,D):
     	return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
@@ -112,6 +114,14 @@ def output_to_original_tlbr(dets,orig_frame):
 
 def main():
     
+    parser = argparse.ArgumentParser(description='Sort tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
+
     with open("./conf/model.json",'r') as f:
         config = json.load(f)
 
@@ -135,14 +145,16 @@ def main():
 
     # cap = cv2.VideoCapture(0)
     # cap = cv2.VideoCapture("demo.avi")
-    cap = cv2.VideoCapture("videos/prueba6.mp4")
+    cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
     out = cv2.VideoWriter(
-            "./output/sort/fskip0/prueba6.avi", fourcc, 25,
+            args.output, fourcc, 25,
             (704, 576))
+    count = int(args.fskip)
+
     trakeable = {}
-    count = 10
+
     while True:
         # loop asking for new image paths if no list is given
         
@@ -150,11 +162,11 @@ def main():
         frame = image_name.copy()
         if ret:
             #Object Detection
-            image, detections = image_detection(
-                image_name, network, class_names, class_colors, 0.25
-                )
-            new_dets = output_to_original_tlbr(detections, image_name)
-            count=0
+            if count == int(args.fskip):
+                image, detections = image_detection(
+                    image_name, network, class_names, class_colors, 0.25
+                    )
+                new_dets = output_to_original_tlbr(detections, image_name)
             #draw bbox on orig image
 
             # if new_dets is not None:
@@ -269,7 +281,12 @@ def main():
                     cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            count+=1
+
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0
+            
             #draw lines
             cv2.rectangle(frame, (0, 0), (130, 40), (0,0,0), -1)
             cv2.putText(frame,'in: '+str(lines[0].countup)+ ' out: '+str(lines[0].countdown), (3,10), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)

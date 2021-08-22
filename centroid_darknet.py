@@ -125,7 +125,14 @@ class Detection(IDetectionMetadata):
 
 
 if __name__ == "__main__":
-
+    parser = argparse.ArgumentParser(description='Sort tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
+        
     #instanciacion de los argumentos
 
     #inicializacion del detector y el tracker, tracker permite
@@ -156,12 +163,14 @@ if __name__ == "__main__":
     #         (416, 416))
 
 
-    cap = cv2.VideoCapture('videos/prueba6.mp4')
-
+    cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
     out = cv2.VideoWriter(
-            "./output/centroid/fskip0/prueba6.avi", fourcc, 25,
+            args.output, fourcc, 25,
             (704, 576))
+    count = int(args.fskip)
+
 
     start_time = datetime.datetime(100,1,1,10,26,47)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -179,7 +188,6 @@ if __name__ == "__main__":
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-    count = 10
     fskip=0
     trakeable = {}
 
@@ -195,13 +203,13 @@ if __name__ == "__main__":
         #     fskip=0
         #     continue
         
-
-        #resize y deteccion de cabezas
-        image, detections = image_detection(
-                    frame, network, class_names, class_colors, 0.25
-                    )
-        new_dets = output_to_original_tlbr(detections, frame)
-        count=0
+        if count == int(args.fskip):
+    
+            #resize y deteccion de cabezas
+            image, detections = image_detection(
+                        frame, network, class_names, class_colors, 0.25
+                        )
+            new_dets = output_to_original_tlbr(detections, frame)
 
         # Creacion y update de IDS
         del_list = []
@@ -293,7 +301,10 @@ if __name__ == "__main__":
 
         #finalmente, se dibujan en el frame la metadata obtenida.
 
-        count +=1
+        if count != int(args.fskip): 
+            count+=1 
+        else: 
+            count = 0
 
 
         cv2.rectangle(frame, (0, 0), (130, 40), (0,0,0), -1)

@@ -151,6 +151,13 @@ def init_camshift(frame,bbox):
     return roi_hist,bbox
 
 def main():
+    parser = argparse.ArgumentParser(description='Sort tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
 
     #Esta lista contendra todas las lineas instanciadas para cada video
     #este argumento en un futuro sera automatizado desde el
@@ -179,20 +186,19 @@ def main():
         batch_size=1
     )
 
-    cap = cv2.VideoCapture("videos/prueba5.mp4")
-    #cap = cv2.VideoCapture("demo.avi")
-    #cap = cv2.VideoCapture("flood.mp4")
+    cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
     out = cv2.VideoWriter(
-            "./output/camshift/fskip0/prueba5.avi", fourcc, 25,
+            args.output, fourcc, 25,
             (704, 576))
+    count = int(args.fskip)
 
     ct = CentroidTracker(maxDisappeared=10,maxDistance=60)
 
     bboxes_camshift = []
 
     camshift_list = []
-    count = 10
     while True:
         # loop asking for new image paths if no list is given
         
@@ -201,27 +207,28 @@ def main():
         if ret:
             #Object Detection
             
-            camshift_list = []
+            if count == int(args.fskip):
+                camshift_list = []
 
-            boxes, confs, clss =  trt.process_img(frame)
-            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
-            new_dets = output_to_original_tlbr(detections, image_name)
-            #draw bbox on orig image
+                image, detections = image_detection(
+                    image_name, network, class_names, class_colors, 0.25
+                    )
+                new_dets = output_to_original_tlbr(detections, image_name)
+                #draw bbox on orig image
 
-            # if new_dets is not None:
-            #     for det in new_dets:
-            #         x1,y1,x2,y2 = det[2]
-            #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
-            
+                # if new_dets is not None:
+                #     for det in new_dets:
+                #         x1,y1,x2,y2 = det[2]
+                #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
+                
 
 
-            #generate camshift histograms
-            if new_dets is not None:
-                for det in new_dets:      
-                    bbox = det[2]
-                    #list of histograms
-                    camshift_list.append(init_camshift(image_name, bbox))
-            count = 0
+                #generate camshift histograms
+                if new_dets is not None:
+                    for det in new_dets:      
+                        bbox = det[2]
+                        #list of histograms
+                        camshift_list.append(init_camshift(image_name, bbox))
             
             #apply camshift
             hsv = cv2.cvtColor(image_name,cv2.COLOR_BGR2HSV)
@@ -347,7 +354,11 @@ def main():
             cv2.putText(frame,'in: '+str(lines[1].countup)+ ' out: '+str(lines[1].countdown), (3,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 0), 1)
             cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2)     
             out.write(frame)
-            count +=1
+
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0
             cv2.imshow('original',image_name)
             cv2.imshow('Inference', image)    
             cv2.imshow('Camshift bbox', frame)    
