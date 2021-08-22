@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import sys
 sys.path.append("./thirdparty/darknet")
-from video_xompass_darknet import * 
+from darknet_api import * 
 import json
 from pyimagesearch.centroidtracker import CentroidTracker
 from scipy.spatial import distance
@@ -203,9 +203,8 @@ def main():
             
             camshift_list = []
 
-            image, detections = image_detection(
-                image_name, network, class_names, class_colors, 0.25
-                )
+            boxes, confs, clss =  trt.process_img(frame)
+            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
             new_dets = output_to_original_tlbr(detections, image_name)
             #draw bbox on orig image
 

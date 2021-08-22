@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import sys
 sys.path.append("./thirdparty/darknet")
-from video_xompass_darknet import * 
+from darknet_api import * 
 import json
 from scipy.spatial import distance
 from tracker import IDetectionMetadata

@@ -5,7 +5,7 @@ from pyimagesearch.centroidtracker import CentroidTracker
 from tracker import IDetectionMetadata
 
 sys.path.append("./thirdparty/darknet")
-from video_xompass_darknet import * 
+from darknet_api import * 
 import json
 import pandas as pd
 from scipy.spatial import distance
