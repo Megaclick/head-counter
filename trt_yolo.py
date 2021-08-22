@@ -80,7 +80,7 @@ class ArgsHelper:
          
 
 if __name__ == "__main__":
-    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=640, height=480, category_num=80, model='yolov4-tiny-416')
+    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=640, height=480, category_num=80, model='yolov4-tiny-head-416')
     trt = DetectTensorRT(args)
     trt.load_tensorRT()
 
@@ -89,13 +89,28 @@ if __name__ == "__main__":
     while(True):
         # Capture frame-by-frame
         ret, frame = cap.read()
-        
+        frame2 = frame
         boxes, confs, clss =  trt.process_img(frame)
 
         img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
         
         detections = list(zip(clss,confs,boxes))
 
+
+    # grab the ROI for the bounding box and convert it
+        # to the HSV color space
+        for box in boxes:
+            roi = orig[tl[1]:br[1], tl[0]:br[0]]
+            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+        
+            # compute a HSV histogram for the ROI and store the
+            # bounding box
+            roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
+            roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
+            roiBox = (tl[0], tl[1], br[0], br[1])
+            hsv = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
+            backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
 
         # Display the resulting frame
         cv2.imshow('frame',frame)
