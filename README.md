@@ -7,7 +7,7 @@ Este repositorio contiene el trabajo hecho para el ramo de Vision por Computador
 El objetivo de este repositorio es entregar una herramienta para hacer seguimiento de personas y el conteo de salida y entrada de personas para evitar la evasión en buses.
 
 
-![Alt Text](./images/testing.gif)
+![](./images/testing.gif)
 
 ##### Requerimientos
 * CUDA >= 10.0: https://developer.nvidia.com/cuda-toolkit-archive 
