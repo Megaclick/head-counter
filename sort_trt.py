@@ -9,7 +9,8 @@ import pandas as pd
 from tracker import IDetectionMetadata
 import math 
 from scipy.spatial import distance
-
+import argparse
+import sys
 def intersect(A,B,C,D):
     	return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
 
@@ -89,6 +90,8 @@ class Detection(IDetectionMetadata):
 	
 	def class_(self):
 		return self._class
+
+#tlwh to tlbr 
 def output_to_original_tlbr(dets,orig_frame):
     height, width, channels = orig_frame.shape
     new_dets = []
@@ -119,17 +122,21 @@ class ArgsHelper:
 
 def main():
     
-   
+    parser = argparse.ArgumentParser(description='camshift tensorrt tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")  
+
     #instanciacion de los argumentos
-    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
+    args2 = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
 
-    #inicializacion del detector y el tracker, tracker permite
-    #10 frames como base para la perdida de ids, y 
-    #una distancia maxima de 60 pixeles para considerar como misma 
-    #id en caso de perdida
-
-    trt = DetectTensorRT(args)
+    trt = DetectTensorRT(args2)
     trt.load_tensorRT()
+
+    #init sort
     mot_tracker = Sort(max_age=30)
 
     #Esta lista contendra todas las lineas instanciadas para cada video
@@ -140,36 +147,29 @@ def main():
     lines.append(line_track(np.array((125,110)), np.array((550,110))))
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
-    # cap = cv2.VideoCapture(0)
-    # cap = cv2.VideoCapture("demo.avi")
-    cap = cv2.VideoCapture("videos/prueba6.mp4")
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    cap = cv2.VideoCapture(args.input)
 
-    # out = cv2.VideoWriter(
-    #         "./output/sort/fskip0/prueba6.avi", fourcc, 25,
-    #         (704, 576))
+    out = cv2.VideoWriter(
+            args.output, fourcc, 25,
+            (704, 576))
+    count = int(args.fskip)
+
     trakeable = {}
-    count = 10
     while True:
-        # loop asking for new image paths if no list is given
         
         ret,image_name = cap.read()
         frame = image_name.copy()
         if ret:
             #Object Detection
-            boxes, confs, clss =  trt.process_img(frame)
+            if count == int(args.fskip):      
+
+                boxes, confs, clss =  trt.process_img(frame)
+                
+                dets = list(zip(clss,confs,boxes))
+                new_dets = dets
+                img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
             
-            dets = list(zip(clss,confs,boxes))
-            new_dets = dets
-            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
-            count=0
-            #draw bbox on orig image
-
-            # if new_dets is not None:
-            #     for det in new_dets:
-            #         x1,y1,x2,y2 = det[2]
-            #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
-
             #format to use with sort
             sort_input = np.empty((0,5))
             if new_dets is not None:
@@ -276,8 +276,11 @@ def main():
 
                     cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-            count+=1
+            #fskip
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0   
             #draw lines
             cv2.rectangle(frame, (0, 0), (130, 40), (0,0,0), -1)
             cv2.putText(frame,'in: '+str(lines[0].countup)+ ' out: '+str(lines[0].countdown), (3,10), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 255), 1)
@@ -285,7 +288,7 @@ def main():
 
             cv2.putText(frame,'in: '+str(lines[1].countup)+ ' out: '+str(lines[1].countdown), (3,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 0), 1)
             cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2)  
-            # out.write(frame)
+            out.write(frame)
             cv2.imshow('original',image_name)
             cv2.imshow('Inference', img)    
             cv2.imshow('sort', sortf)    

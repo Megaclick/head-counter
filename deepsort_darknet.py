@@ -71,29 +71,6 @@ class line_track():
 
 
 
-"""
-Clase Detection para mantener orden dentro de la metadata
-que se envia al sistema centralizado de conteo.
-"""
-# class Detection(IDetectionMetadata):
-
-# 	def __init__(self, darknet_det):
-# 		#self._class = darknet_det[0].decode('ascii')
-# 		self._class = darknet_det[0]
-
-# 		x, y, width, height = darknet_det[2]
-# 		self.bbox = [x,y,width-x,height-y]
-# 		#self.bbox = [int(round(x - (width / 2))), int(round(y - (height / 2))), int(width), int(height)]
-# 		self._confidence = float(darknet_det[1])
-	
-# 	def tlbr_a(self):
-# 		return self.bbox
-
-# 	def confidence(self):
-# 		return self._confidence
-	
-# 	def class_(self):
-# 		return self._class
 
 #https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
 def get_iou(boxA, boxB):
@@ -117,7 +94,7 @@ def get_iou(boxA, boxB):
 
 
 
-
+#transform from tlwh to tlbr 
 def output_to_original_tlbr(dets,orig_frame):
     height, width, channels = orig_frame.shape
     new_dets = []
@@ -162,7 +139,7 @@ def main():
     with open("./conf/model.json",'r') as f:
         config = json.load(f)
 
-    #change model
+    #init model darknet
     net_config = config['model']["head"]
 
     random.seed(3)  # deterministic bbox colors
@@ -173,8 +150,7 @@ def main():
         batch_size=1
     )
 
-    #cap = cv2.VideoCapture(0)
-    #cap = cv2.VideoCapture("demo.avi")
+
     cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
@@ -214,7 +190,7 @@ def main():
                     names.append(det[0])
                     scores.append(det[1])
                     bboxes.append(det[2])
-
+                #transform data to deepsort
                 features = encoder(frame, bboxes)
 
                 detections = [Detection(bbox, score, class_name, feature) for bbox, score, class_name, feature in zip(bboxes, scores, names, features)]   
@@ -323,7 +299,7 @@ def main():
             cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2)  
 
             out.write(frame)
-
+            #fskip
             if count != int(args.fskip): 
                 count+=1 
             else: 

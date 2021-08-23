@@ -17,6 +17,8 @@ import time
 from threading import Thread, enumerate
 from queue import LifoQueue, Queue
 import datetime 
+import argparse
+import sys
 ALLOWED_CLASSES = [0.]
 
 def intersect(A,B,C,D):
@@ -112,26 +114,31 @@ class ArgsHelper:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='camshift tensorrt tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
 
     #instanciacion de los argumentos
-    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
-
-    #inicializacion del detector y el tracker, tracker permite
-    #10 frames como base para la perdida de ids, y 
-    #una distancia maxima de 60 pixeles para considerar como misma 
-    #id en caso de perdida
-
-    trt = DetectTensorRT(args)
+    args2 = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
+    trt = DetectTensorRT(args2)
     trt.load_tensorRT()
+
+    #init centroid tracker
     ct = CentroidTracker(maxDisappeared=10,maxDistance=60)
 
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    # out = cv2.VideoWriter(
-    #         "./output/mostrar/salen25/naive-distance.avi", fourcc, 25,
-    #         (416, 416))
 
 
-    cap = cv2.VideoCapture('demo.avi')
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    cap = cv2.VideoCapture(args.input)
+
+    out = cv2.VideoWriter(
+            args.output, fourcc, 25,
+            (704, 576))
+    count = int(args.fskip)
 
     start_time = datetime.datetime(100,1,1,10,26,47)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -144,21 +151,12 @@ if __name__ == "__main__":
 
 
     lines = []
-    #entrada
-    # lines.append(line_track(np.array((70,50)), np.array((380,50)))) 
-    # lines.append(line_track(np.array((70,60)), np.array((380,60))))
-    #normal
-    #lines.append(line_track(np.array((70,95)), np.array((380,95))))
-    #lines.append(line_track(np.array((70,90)), np.array((380,90))))
-    #nano
-    lines.append(line_track(np.array((120,205)), np.array((281,161))))
-    lines.append(line_track(np.array((118,228)), np.array((281,184))))
+    lines.append(line_track(np.array((125,110)), np.array((550,110))))
+    lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
 
 
-    count = 0
-    fskip=0
     trakeable = {}
 
     while(True):
@@ -169,15 +167,14 @@ if __name__ == "__main__":
         
         #Frame skip para ver comportamiento ante menos frames
 
-        # if fskip % 5 !=0:
-        #     fskip=0
-        #     continue
-        
+
 
         #resize y deteccion de cabezas
-        frame = cv2.resize(frame,(416,416)) 
-        boxes, confs, clss =  trt.process_img(frame)
-        img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+        if count == int(args.fskip):      
+
+            #frame = cv2.resize(frame,(416,416)) 
+            boxes, confs, clss =  trt.process_img(frame)
+            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
         tim = time.time()
 
         # Creacion y update de IDS
@@ -270,7 +267,11 @@ if __name__ == "__main__":
         #finalmente, se dibujan en el frame la metadata obtenida.
         print(time.time()-tim)
 
-        fskip +=1
+        #fskip
+        if count != int(args.fskip): 
+            count+=1 
+        else: 
+            count = 0   
 
 
         cv2.rectangle(frame, (0, 0), (130, 40), (0,0,0), -1)

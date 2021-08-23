@@ -14,7 +14,8 @@ from tools import generate_detections as gdet
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
-
+import argparse
+import sys
 def intersect(A,B,C,D):
     	return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
 
@@ -71,29 +72,7 @@ class line_track():
 
 
 
-"""
-Clase Detection para mantener orden dentro de la metadata
-que se envia al sistema centralizado de conteo.
-"""
-# class Detection(IDetectionMetadata):
 
-# 	def __init__(self, darknet_det):
-# 		#self._class = darknet_det[0].decode('ascii')
-# 		self._class = darknet_det[0]
-
-# 		x, y, width, height = darknet_det[2]
-# 		self.bbox = [x,y,width-x,height-y]
-# 		#self.bbox = [int(round(x - (width / 2))), int(round(y - (height / 2))), int(width), int(height)]
-# 		self._confidence = float(darknet_det[1])
-	
-# 	def tlbr_a(self):
-# 		return self.bbox
-
-# 	def confidence(self):
-# 		return self._confidence
-	
-# 	def class_(self):
-# 		return self._class
 
 #https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
 def get_iou(boxA, boxB):
@@ -117,7 +96,7 @@ def get_iou(boxA, boxB):
 
 
 
-
+#tlwh to tlbr
 def output_to_original_tlbr(dets,orig_frame):
     height, width, channels = orig_frame.shape
     new_dets = []
@@ -141,7 +120,15 @@ class ArgsHelper:
             setattr(self, k, v)
 
 def main():
-    
+    parser = argparse.ArgumentParser(description='camshift tensorrt tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help") 
+
+
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None
@@ -159,49 +146,43 @@ def main():
     colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
 
-    #instanciacion de los argumentos
-    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
-
-    #inicializacion del detector y el tracker, tracker permite
-    #10 frames como base para la perdida de ids, y 
-    #una distancia maxima de 60 pixeles para considerar como misma 
-    #id en caso de perdida
-
-    trt = DetectTensorRT(args)
+    #trt args
+    args2 = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
+    trt = DetectTensorRT(args2)
     trt.load_tensorRT()
 
-    #cap = cv2.VideoCapture(0)
-    #cap = cv2.VideoCapture("demo.avi")
-    cap = cv2.VideoCapture("videos/prueba6.mp4")
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    cap = cv2.VideoCapture(args.input)
 
-    # out = cv2.VideoWriter(
-    #         "./output/deepsort/fskip0/prueba6.avi", fourcc, 25,
-    #         (704, 576))
+    out = cv2.VideoWriter(
+            args.output, fourcc, 25,
+            (704, 576))
+    count = int(args.fskip)
 
 
     trakeable ={}
+
+    #lineas a considerar
     lines = []
 
     lines.append(line_track(np.array((125,110)), np.array((550,110))))
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-    count = 10
     while True:
-        # loop asking for new image paths if no list is given
         
         ret,image_name = cap.read()
         frame = image_name.copy()
         if ret:
             #Object Detection
-            boxes, confs, clss =  trt.process_img(frame)
-            
-            dets = list(zip(clss,confs,boxes))
-            new_dets = dets
-            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+            if count == int(args.fskip):      
 
-            count = 0
+                boxes, confs, clss =  trt.process_img(frame)
+                
+                dets = list(zip(clss,confs,boxes))
+                new_dets = dets
+                img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+
             if len(new_dets)!=0 :
                 bboxes = []
                 scores = []
@@ -210,9 +191,9 @@ def main():
                     names.append(det[0])
                     scores.append(det[1])
                     bboxes.append(det[2])
-
+                    
+                #transform data to feed it to deep sort
                 features = encoder(frame, bboxes)
-
                 detections = [Detection(bbox, score, class_name, feature) for bbox, score, class_name, feature in zip(bboxes, scores, names, features)]   
                 tracker.predict()
                 tracker.update(detections)
@@ -318,9 +299,12 @@ def main():
             cv2.putText(frame,'in: '+str(lines[1].countup)+ ' out: '+str(lines[1].countdown), (3,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 0), 1)
             cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2)  
 
-            # out.write(frame)
+            out.write(frame)
 
-            count+=1
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0   
             #draw bbox on orig image
             if new_dets is not None:
                 for det in new_dets:

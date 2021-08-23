@@ -91,6 +91,10 @@ class Detection(IDetectionMetadata):
 	
 	def class_(self):
 		return self._class
+
+"""
+Transformacion de tlwh a tlbr
+"""
 def output_to_original_tlbr(dets,orig_frame):
     height, width, channels = orig_frame.shape
     new_dets = []
@@ -122,10 +126,11 @@ def main():
     if args.input is None or args.output is None or args.fskip is None:
         sys.exit("Please provide path to input or output video files! See --help")
 
+
+    #Se carga el modelo de darknet y se inicializa SORT
     with open("./conf/model.json",'r') as f:
         config = json.load(f)
 
-    #change model
     net_config = config['model']["head"]
     mot_tracker = Sort(max_age=30)
     random.seed(3)  # deterministic bbox colors
@@ -143,8 +148,6 @@ def main():
     lines.append(line_track(np.array((125,110)), np.array((550,110))))
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
-    # cap = cv2.VideoCapture(0)
-    # cap = cv2.VideoCapture("demo.avi")
     cap = cv2.VideoCapture(args.input)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
@@ -156,7 +159,7 @@ def main():
     trakeable = {}
 
     while True:
-        # loop asking for new image paths if no list is given
+
         
         ret,image_name = cap.read()
         frame = image_name.copy()
@@ -167,12 +170,6 @@ def main():
                     image_name, network, class_names, class_colors, 0.25
                     )
                 new_dets = output_to_original_tlbr(detections, image_name)
-            #draw bbox on orig image
-
-            # if new_dets is not None:
-            #     for det in new_dets:
-            #         x1,y1,x2,y2 = det[2]
-            #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
 
             #format to use with sort
             sort_input = np.empty((0,5))
@@ -185,12 +182,12 @@ def main():
 
      
 
-
+            #Update Sort
             track_bbs_ids = mot_tracker.update(sort_input)
             sortf = frame.copy()
             centroid_list = []
 
-            # get the bbox and id and draw onto img & prepare data to line count
+            #Get the bbox and id and draw onto img & prepare data to line count
             for det in track_bbs_ids:
                 x1 = int(det[0])
                 y1 = int(det[1])
@@ -206,6 +203,8 @@ def main():
                 cv2.rectangle(sortf, (x1,y1), (x2,y2), (255,0,0))
             del_list = []
 
+
+            #module line count
             for (objectID, centroid) in centroid_list:
 
                     #verifica si una id de alguna cabeza ya cruzo
@@ -246,7 +245,8 @@ def main():
                                 for line in lines:
                                         if line.counted[objectID] == False:
                                             #Calculo de la direccion del centroide, 
-                                            #un ejemplo visual de lo que esta ocurriendo
+                                           #resize y deteccion de cabezas
+             #un ejemplo visual de lo que esta ocurriendo
                                             #Se puede ver en este geogebra
                                             #https://www.geogebra.org/classic/evayn9xw
                                             up = 0
@@ -265,7 +265,8 @@ def main():
                                                 if va < 0:
                                                     va = va + 2*math.pi
                                                 if va > math.pi:
-                                                    #sube
+                                           #resize y deteccion de cabezas
+                     #sube
                                                     line.count_up()
                                                 else:
                                                     #baja
@@ -275,13 +276,13 @@ def main():
 
                         else:
                             trakeable[objectID].append(centroid)
-
+                    #Draw ID onto img
                     text = "ID {}".format(objectID)
 
                     cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-
+            #fskip
             if count != int(args.fskip): 
                 count+=1 
             else: 

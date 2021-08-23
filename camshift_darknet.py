@@ -168,14 +168,14 @@ def main():
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-
+    #term to end camshift
     term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 3 )
     trakeable = {}
 
     with open("./conf/model.json",'r') as f:
         config = json.load(f)
 
-    #change model
+    #init darknet
     net_config = config['model']["head"]
 
     random.seed(3)  # deterministic bbox colors
@@ -194,13 +194,13 @@ def main():
             (704, 576))
     count = int(args.fskip)
 
+    #init ID assigner
     ct = CentroidTracker(maxDisappeared=10,maxDistance=60)
 
     bboxes_camshift = []
 
     camshift_list = []
     while True:
-        # loop asking for new image paths if no list is given
         
         ret,image_name = cap.read()
         frame = image_name.copy()
@@ -214,13 +214,6 @@ def main():
                     image_name, network, class_names, class_colors, 0.25
                     )
                 new_dets = output_to_original_tlbr(detections, image_name)
-                #draw bbox on orig image
-
-                # if new_dets is not None:
-                #     for det in new_dets:
-                #         x1,y1,x2,y2 = det[2]
-                #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
-                
 
 
                 #generate camshift histograms
@@ -261,9 +254,7 @@ def main():
                 # img2 = cv2.polylines(frame,[pts],True, 255,2)
 
 
-            # for box1 in bboxes_camshift:
-            #     for box2 in bboxes_camshift_prev:
-            #         print(get_iou(box1, box2))
+
 
 
             objects = ct.update(bboxes_camshift)

@@ -9,7 +9,8 @@ import pandas as pd
 from tracker import IDetectionMetadata
 import math 
 from trt_yolo import DetectTensorRT
-
+import argparse 
+import sys
 
 #https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
 def get_iou(boxA, boxB):
@@ -165,6 +166,15 @@ class ArgsHelper:
 
 def main():
 
+    parser = argparse.ArgumentParser(description='camshift tensorrt tracking')
+    parser.add_argument('-i', "--input", dest='input', help='full path to input video that will be processed')
+    parser.add_argument('-f', "--fskip", dest='fskip', help='frameskip to be used')
+    parser.add_argument('-o', "--output", dest='output', help='full path for saving processed video output')
+    args = parser.parse_args()
+    if args.input is None or args.output is None or args.fskip is None:
+        sys.exit("Please provide path to input or output video files! See --help")
+
+
     #Esta lista contendra todas las lineas instanciadas para cada video
     #este argumento en un futuro sera automatizado desde el
     #sistema centralizado que manejará todos los buses.
@@ -174,36 +184,28 @@ def main():
     lines.append(line_track(np.array((125,120)), np.array((550,120))))
 
 
-
+    #term to end camshift
     term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 20, 3 )
     trakeable = {}
+    cap = cv2.VideoCapture(args.input)
 
-    #instanciacion de los argumentos
-    args = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
-
-    #inicializacion del detector y el tracker, tracker permite
-    #10 frames como base para la perdida de ids, y 
-    #una distancia maxima de 60 pixeles para considerar como misma 
-    #id en caso de perdida
-
-    trt = DetectTensorRT(args)
+    #initialize trt args & detector
+    args2 = ArgsHelper(image=None, video=None, video_looping=False,rtsp=None, rtsp_latency=200, usb=0, onboard=None, copy_frame=False, do_resize=False, width=416, height=416, category_num=1, model='yolov4-tiny-head-416')
+    trt = DetectTensorRT(args2)
     trt.load_tensorRT()
 
-    cap = cv2.VideoCapture("videos/prueba2.mp4")
-    #cap = cv2.VideoCapture("demo.avi")
-    #cap = cv2.VideoCapture("flood.mp4")
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(
-            "./output/camshift/fskip0/prueba5.avi", fourcc, 25,
-            (704, 576))
 
+    out = cv2.VideoWriter(
+            args.output, fourcc, 25,
+            (704, 576))
+    count = int(args.fskip)
+    #initialize centroid tracker 
     ct = CentroidTracker(maxDisappeared=10,maxDistance=60)
 
     bboxes_camshift = []
-
     camshift_list = []
-    count = 10
     while True:
         # loop asking for new image paths if no list is given
         
@@ -211,33 +213,23 @@ def main():
         frame = image_name.copy()
         if ret:
             #Object Detection
-            
-            camshift_list = []
+            if count == int(args.fskip):      
+                camshift_list = []
 
-            boxes, confs, clss =  trt.process_img(frame)
-            
-            dets = list(zip(clss,confs,boxes))
+                boxes, confs, clss =  trt.process_img(frame)
+                
+                dets = list(zip(clss,confs,boxes))
 
-            img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
-            #new_dets = output_to_original_tlbr(dets, image_name)
-            new_dets = dets
-            #draw bbox on orig image
+                img = trt.vis.draw_bboxes(frame, boxes, confs, clss)
+                #new_dets = output_to_original_tlbr(dets, image_name)
+                new_dets = dets
 
-            # if new_dets is not None:
-            #     for det in new_dets:
-            #         x1,y1,x2,y2 = det[2]
-            #         cv2.rectangle(image_name, (x1,y1), (x2,y2), (255,0,0))
-            
-            print(new_dets)
-
-
-            #generate camshift histograms
-            if new_dets is not None:
-                for det in new_dets:      
-                    bbox = det[2]
-                    #list of histograms
-                    camshift_list.append(init_camshift(image_name, bbox))
-            count = 0
+                #generate camshift histograms
+                if new_dets is not None:
+                    for det in new_dets:      
+                        bbox = det[2]
+                        #list of histograms
+                        camshift_list.append(init_camshift(image_name, bbox))
             
             #apply camshift
             hsv = cv2.cvtColor(image_name,cv2.COLOR_BGR2HSV)
@@ -270,11 +262,8 @@ def main():
                 # img2 = cv2.polylines(frame,[pts],True, 255,2)
 
 
-            # for box1 in bboxes_camshift:
-            #     for box2 in bboxes_camshift_prev:
-            #         print(get_iou(box1, box2))
 
-
+            #update centroid ID 
             objects = ct.update(bboxes_camshift)
 
             del_list = []
@@ -363,7 +352,13 @@ def main():
             cv2.putText(frame,'in: '+str(lines[1].countup)+ ' out: '+str(lines[1].countdown), (3,30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 0), 1)
             cv2.line(frame, tuple(lines[1].pline1), tuple(lines[1].pline2), (255, 255, 0),2)     
             out.write(frame)
-            count +=1
+
+            #fskip
+            if count != int(args.fskip): 
+                count+=1 
+            else: 
+                count = 0            
+                
             cv2.imshow('original',image_name)
             cv2.imshow('Inference', img)    
             cv2.imshow('Camshift bbox', frame)    

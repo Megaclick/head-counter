@@ -135,11 +135,6 @@ if __name__ == "__main__":
         
     #instanciacion de los argumentos
 
-    #inicializacion del detector y el tracker, tracker permite
-    #10 frames como base para la perdida de ids, y 
-    #una distancia maxima de 60 pixeles para considerar como misma 
-    #id en caso de perdida
-
 
     with open("./conf/model.json",'r') as f:
         config = json.load(f)
@@ -155,12 +150,9 @@ if __name__ == "__main__":
         batch_size=1
     )
 
+    #init centroid tracker
     ct = CentroidTracker(maxDisappeared=10,maxDistance=60)
 
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    # out = cv2.VideoWriter(
-    #         "./output/mostrar/salen25/naive-distance.avi", fourcc, 25,
-    #         (416, 416))
 
 
     cap = cv2.VideoCapture(args.input)
@@ -197,15 +189,9 @@ if __name__ == "__main__":
         if not ret:
             break
         
-        #Frame skip para ver comportamiento ante menos frames
-
-        # if fskip % 5 !=0:
-        #     fskip=0
-        #     continue
-        
+        #object detection
         if count == int(args.fskip):
     
-            #resize y deteccion de cabezas
             image, detections = image_detection(
                         frame, network, class_names, class_colors, 0.25
                         )
