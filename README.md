@@ -1,6 +1,6 @@
 # head-counter
 
-## Introduccion 
+## Introducción 
 
 Este repositorio contiene el trabajo hecho para el ramo de Vision por Computador [IPD-441] de la universidad Federico Santamaría.
 
@@ -108,3 +108,18 @@ Tambien se adjunta una pequeña demo de un modulo que utiliza floodfill, se plan
 ```bash
 python3 floodfill.py
 ```
+
+
+## Repositorios de referencia
+
+Darknet y yolov4
+https://github.com/AlexeyAB/darknet
+
+Sort
+https://github.com/abewley/sort
+
+DeepSort
+https://github.com/nwojke/deep_sort
+
+TensorRT para python
+https://github.com/jkjung-avt/tensorrt_demos
