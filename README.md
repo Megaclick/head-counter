@@ -6,10 +6,12 @@ Este repositorio contiene el trabajo hecho para el ramo de Vision por Computador
 
 El objetivo de este repositorio es entregar una herramienta para hacer seguimiento de personas y el conteo de salida y entrada de personas para evitar la evasión en buses.
 
+Se prueban tanto Camshift, Sort, Deepsort y Distancia euclidiana utilizando Darknet y TensorRT.
+
 
 ![til](./images/testing.gif)
 
-##### Requerimientos
+## Requerimientos
 * CUDA >= 10.0: https://developer.nvidia.com/cuda-toolkit-archive 
 * OpenCV https://opencv.org/releases/
 * cuDNN >= 7.0 https://developer.nvidia.com/rdp/cudnn-archive 
@@ -65,7 +67,8 @@ Luego
 make -j$(nproc)
 ```
 
-##TensorRT
+## TensorRT
+
 Se requiere una versión compilada de TensorRT en el sistema, y a su vez, su version de python instalada dentro del entorno virtual. 
 Luego, se debe cambiar dentro del Makefile de la carpeta plugins en la linea 30 y 31 el PATH donde estan las librerias de TensorRT.
 
